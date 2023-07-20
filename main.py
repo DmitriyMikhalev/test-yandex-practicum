@@ -1,25 +1,31 @@
 import os
 
 from dotenv import load_dotenv
-from telegram.ext import CallbackContext, CommandHandler, Updater
-from telegram.update import Update
+from telegram.ext import (CommandHandler, Dispatcher, Filters, MessageHandler,
+                          Updater)
+
+from callbacks import help_callback, start_callback, text_callback
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 
-def echo(update: Update, context: CallbackContext) -> None:
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text='echo'
-    )
-
-
 def main() -> None:
     bot = Updater(token=BOT_TOKEN)
-    bot.dispatcher.add_handler(
-        handler=CommandHandler(command='start', callback=echo)
+    dispatcher: Dispatcher = bot.dispatcher
+
+    dispatcher.add_handler(
+        handler=CommandHandler(command='start', callback=start_callback)
+    )
+
+    dispatcher.add_handler(
+        handler=CommandHandler(command='help', callback=help_callback)
+    )
+
+    # any text
+    dispatcher.add_handler(
+        handler=MessageHandler(filters=Filters.text, callback=text_callback)
     )
 
     bot.start_polling()

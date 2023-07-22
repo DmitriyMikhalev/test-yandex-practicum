@@ -1,39 +1,31 @@
-import logging
 import os
 
-from telegram import ParseMode, ReplyKeyboardMarkup
+from telegram import ParseMode, ReplyKeyboardMarkup, User
 from telegram.ext import CallbackContext
 from telegram.update import Update
 
-from exceptions import EmptySpeechError, SpeechRecognizeError
+from decorators import log_callback
 from question import Question
-from settings import (ACTIONS, HOBBY_ANSWER, QR_CAPTION, START_MESSAGE,
-                      TO_ACTIONS)
+from settings import (ACTIONS, HOBBY_ANSWER, LOG_USER, QR_CAPTION,
+                      START_MESSAGE, TO_ACTIONS)
 from utils import get_keyboard, speech_to_str
 
 
+@log_callback
 def actions_callback(update: Update, context: CallbackContext) -> None:
-    text: str | None = update.message.text
+    msg: str | None = update.message.text
 
-    if (voice_file := update.message.voice) is not None:
-        try:
-            text: str = speech_to_str(bot=context.bot, voice_file=voice_file)
-        except SpeechRecognizeError as error:
-            logging.error('Speech wasn\'t recognized.')
-            update.message.reply_text(text=str(error))
+    if update.message.voice is not None:
+        if (msg := speech_to_str(context=context, update=update)) is None:
             return
-        except EmptySpeechError as error:
-            logging.info('Speech is empty.')
-            update.message.reply_text(text=str(error))
-            return
-        else:
-            logging.debug('Speech was recognized.')
 
-    match text.lower():
+    match msg.lower():
         case Question.HOBBY:
             update.message.reply_text(text=HOBBY_ANSWER)
         case Question.LOVE_STORY:
-            update.message.reply_text(text='love is..')
+            file = os.path.join(os.getcwd(), 'media', 'test.mp3')
+            file = open(file=file, mode='rb')
+            update.message.reply_voice(voice=file)
         case Question.SELFIE:
             update.message.reply_text(text='selfie..')
         case Question.SCHOOL_PHOTO:
@@ -43,27 +35,35 @@ def actions_callback(update: Update, context: CallbackContext) -> None:
         case Question.GPT | Question.GPT_ALIAS:
             update.message.reply_text(text='GPT is..')
         case _:
-            echo(context=context, update=update)
+            if msg.startswith('/nextstep'):
+                nextstep_callback(context=context, update=update)
+            else:
+                echo(context=context, update=update)
 
 
+@log_callback
 def echo(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(
         text='Я не умею отвечать на такие сообщения :('
     )
 
 
+@log_callback
 def nextstep_callback(update: Update, context: CallbackContext) -> None:
     owner_id = os.getenv('OWNER_CHAT_ID')
-    msg = update.message.text.removeprefix('/nextstep ')
-    sender = update.message.from_user
+    msg: str = update.message.text.removeprefix('/nextstep ')
+    sender: User = update.message.from_user
 
     context.bot.send_message(
         chat_id=owner_id,
-        text=f'Message from @{sender.username} ({sender.full_name})\n - {msg}'
+        text='Message from' +
+             LOG_USER.format(sender.username, sender.id) +
+             f'\n - {msg}'
     )
     update.message.reply_text(text='Сообщение доставлено автору!')
 
 
+@log_callback
 def repo_callback(update: Update, context: CallbackContext) -> None:
     file_path = os.path.join(os.getcwd(), 'media', 'clck.jpg')
     update.message.reply_photo(
@@ -73,6 +73,7 @@ def repo_callback(update: Update, context: CallbackContext) -> None:
     )
 
 
+@log_callback
 def start_callback(update: Update, context: CallbackContext) -> None:
     keyboard = ReplyKeyboardMarkup(
         keyboard=(
@@ -86,8 +87,9 @@ def start_callback(update: Update, context: CallbackContext) -> None:
     )
 
 
+@log_callback
 def to_actions_callback(update: Update, context: CallbackContext) -> None:
-    keyboard = get_keyboard()
+    keyboard: ReplyKeyboardMarkup = get_keyboard()
     update.message.reply_text(
         reply_markup=keyboard,
         text=ACTIONS

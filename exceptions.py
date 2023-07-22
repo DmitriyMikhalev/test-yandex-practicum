@@ -8,3 +8,7 @@ class EmptySpeechError(SpeechError):
 
 class SpeechRecognizeError(SpeechError):
     pass
+
+
+class NoTokenError(Exception):
+    pass

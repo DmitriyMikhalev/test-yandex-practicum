@@ -3,19 +3,18 @@ import os
 import time
 
 import requests
-from telegram import Bot, File, ReplyKeyboardMarkup, Voice
+from telegram import File, ReplyKeyboardMarkup, Update, User
+from telegram.ext import CallbackContext
 
-from exceptions import EmptySpeechError, SpeechRecognizeError
-from settings import GPT, HOBBY, LOVE_STORY, SCHOOL_PHOTO, SELFIE, SQL_NOSQL
+from exceptions import EmptySpeechError, NoTokenError, SpeechRecognizeError
+from settings import (GPT, HOBBY, LOG_USER, LOVE_STORY, SCHOOL_PHOTO, SELFIE,
+                      SQL_NOSQL)
 
 
-def check_tokens(tokens: dict[str, str]) -> bool:
+def check_tokens(tokens: dict[str, dict]) -> None:
     for name, token in tokens.items():
         if not token:
-            logging.ERROR(f'Token {name} is empty.')
-            return False
-
-    return True
+            raise NoTokenError(f'{name} is not passed.')
 
 
 def get_keyboard() -> ReplyKeyboardMarkup:
@@ -48,7 +47,7 @@ def get_results(options: dict[str, str | int]) -> dict:
 def recognize_speech(speech: bytes) -> dict:
     endpoint = 'https://api.speechtext.ai/recognize?'
     headers = {'Content-Type': 'application/octet-stream'}
-    secret_key = os.getenv('SPEECH_KEY')
+    secret_key = os.getenv('API_KEY')
 
     options = {
         'key': secret_key,
@@ -71,19 +70,27 @@ def recognize_speech(speech: bytes) -> dict:
     return get_results(options)
 
 
-def speech_to_str(
-    bot: Bot,
-    voice_file: Voice
-) -> str:
-    file: File = bot.get_file(voice_file.file_id)
-    speech_bytes: bytes = file.download_as_bytearray()
-    result: dict = recognize_speech(speech=speech_bytes)
+def speech_to_str(update: Update, context: CallbackContext) -> str | None:
+    """Returns None if message is empty or unknown, else returns message."""
+    try:
+        text: None | str = None
+        user: User = update.message.from_user
+        file: File = context.bot.get_file(update.message.voice.file_id)
+        speech_bytes: bytes = file.download_as_bytearray()
+        result: dict = recognize_speech(speech=speech_bytes)
+        user_log = LOG_USER.format(user.username, user.id)
 
-    if result.get('status', 'failed') == 'failed':
-        raise SpeechRecognizeError('Не удалось распознать речь.')
-
-    # empty speech message
-    if not (text := result.get('results', {}).get('transcript', '')):
-        raise EmptySpeechError('Пустое голосовое сообщение.')
-
-    return text
+        if result.get('status', 'failed') == 'failed':
+            raise SpeechRecognizeError('Не удалось распознать речь.')
+        if not result.get('results', {}).get('transcript', ''):
+            raise EmptySpeechError('Пустое голосовое сообщение.')
+    except SpeechRecognizeError as error:
+        logging.info(user_log + '\'s speech wasn\'t recognized.')
+        update.message.reply_text(text=str(error))
+    except EmptySpeechError as error:
+        logging.info(user_log + '\'s speech is empty.')
+        update.message.reply_text(text=str(error))
+    else:
+        logging.info(user_log + '\'s speech was recognized.')
+    finally:
+        return text

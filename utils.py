@@ -17,6 +17,12 @@ def check_tokens(tokens: dict[str, dict]) -> None:
             raise NoTokenError(f'{name} is not passed.')
 
 
+def get_file_bytes(filename) -> bytes:
+    file_path = os.path.join(os.getcwd(), 'media', filename)
+    with open(file=file_path, mode='rb') as file:
+        return file.read()
+
+
 def get_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=(
@@ -82,7 +88,7 @@ def speech_to_str(update: Update, context: CallbackContext) -> str | None:
 
         if result.get('status', 'failed') == 'failed':
             raise SpeechRecognizeError('Не удалось распознать речь.')
-        if not result.get('results', {}).get('transcript', ''):
+        if not (text := result.get('results', {}).get('transcript')):
             raise EmptySpeechError('Пустое голосовое сообщение.')
     except SpeechRecognizeError as error:
         logging.info(user_log + '\'s speech wasn\'t recognized.')

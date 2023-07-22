@@ -8,7 +8,7 @@ from decorators import log_callback
 from question import Question
 from settings import (ACTIONS, HOBBY_ANSWER, LOG_USER, QR_CAPTION,
                       START_MESSAGE, TO_ACTIONS)
-from utils import get_keyboard, speech_to_str
+from utils import get_keyboard, speech_to_str, get_file_bytes
 
 
 @log_callback
@@ -23,17 +23,20 @@ def actions_callback(update: Update, context: CallbackContext) -> None:
         case Question.HOBBY:
             update.message.reply_text(text=HOBBY_ANSWER)
         case Question.LOVE_STORY:
-            file = os.path.join(os.getcwd(), 'media', 'test.mp3')
-            file = open(file=file, mode='rb')
-            update.message.reply_voice(voice=file)
+            audio = get_file_bytes(filename='love.ogg')
+            update.message.reply_voice(voice=audio)
         case Question.SELFIE:
-            update.message.reply_text(text='selfie..')
+            photo = get_file_bytes(filename='selfie.jpg')
+            update.message.reply_photo(photo=photo)
         case Question.SCHOOL_PHOTO:
-            update.message.reply_text(text='school photo..')
+            photo = get_file_bytes(filename='high-school.jpg')
+            update.message.reply_photo(photo=photo)
         case Question.SQL_NOSQL | Question.SQL_ALIAS:
-            update.message.reply_text(text='sql vs nosql..')
+            audio = get_file_bytes(filename='sql-nosql.ogg')
+            update.message.reply_voice(voice=audio)
         case Question.GPT | Question.GPT_ALIAS:
-            update.message.reply_text(text='GPT is..')
+            audio = get_file_bytes(filename='gpt.ogg')
+            update.message.reply_voice(voice=audio)
         case _:
             if msg.startswith('/nextstep'):
                 nextstep_callback(context=context, update=update)
@@ -56,7 +59,7 @@ def nextstep_callback(update: Update, context: CallbackContext) -> None:
 
     context.bot.send_message(
         chat_id=owner_id,
-        text='Message from' +
+        text='Message from ' +
              LOG_USER.format(sender.username, sender.id) +
              f'\n - {msg}'
     )

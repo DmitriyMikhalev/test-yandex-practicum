@@ -5,4 +5,6 @@ venv/
 .env
 !sample.env
 *.log
-*.mp3
+*.ogg
+*.jpg
+!clck.jpg

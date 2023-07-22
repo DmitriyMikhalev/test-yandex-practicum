@@ -3,8 +3,9 @@ import os
 import time
 
 import requests
-from telegram import ReplyKeyboardMarkup
+from telegram import Bot, File, ReplyKeyboardMarkup, Voice
 
+from exceptions import EmptySpeechError, SpeechRecognizeError
 from settings import GPT, HOBBY, LOVE_STORY, SCHOOL_PHOTO, SELFIE, SQL_NOSQL
 
 
@@ -28,8 +29,9 @@ def get_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
-def get_results(options):
+def get_results(options: dict[str, str | int]) -> dict:
     endpoint = 'https://api.speechtext.ai/results?'
+
     while True:
         results = requests.get(endpoint, params=options).json()
         if results['status'] == 'failed':
@@ -39,13 +41,14 @@ def get_results(options):
             logging.info('Speech was recognized')
             break
         time.sleep(3)
+
     return results
 
 
 def recognize_speech(speech: bytes) -> dict:
-    secret_key = os.getenv('SPEECH_KEY')
     endpoint = 'https://api.speechtext.ai/recognize?'
     headers = {'Content-Type': 'application/octet-stream'}
+    secret_key = os.getenv('SPEECH_KEY')
 
     options = {
         'key': secret_key,
@@ -53,10 +56,10 @@ def recognize_speech(speech: bytes) -> dict:
         'format': 'ogg'
     }
     response = requests.post(
-        endpoint,
+        data=speech,
         headers=headers,
         params=options,
-        data=speech
+        url=endpoint
     ).json()
 
     options = {
@@ -66,3 +69,21 @@ def recognize_speech(speech: bytes) -> dict:
     }
 
     return get_results(options)
+
+
+def speech_to_str(
+    bot: Bot,
+    voice_file: Voice
+) -> str:
+    file: File = bot.get_file(voice_file.file_id)
+    speech_bytes: bytes = file.download_as_bytearray()
+    result: dict = recognize_speech(speech=speech_bytes)
+
+    if result.get('status', 'failed') == 'failed':
+        raise SpeechRecognizeError('Не удалось распознать речь.')
+
+    # empty speech message
+    if not (text := result.get('results', {}).get('transcript', '')):
+        raise EmptySpeechError('Пустое голосовое сообщение.')
+
+    return text

@@ -56,9 +56,9 @@ def main() -> None:
         )
     )
 
-    # unsupported text
+    # unsupported messages including media, polls and other
     dispatcher.add_handler(
-        handler=MessageHandler(filters=Filters.text, callback=echo)
+        handler=MessageHandler(filters=Filters.all, callback=echo)
     )
 
     bot.start_polling()
@@ -67,8 +67,7 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
     try:
-        pass
+        main()
     except Exception as e:
         logging.error(str(e) + '\nApp was closed.')

@@ -11,7 +11,9 @@ from exceptions import NoTokenError
 from settings import TO_ACTIONS
 from utils import check_tokens
 
-load_dotenv()
+env_file = os.path.join(os.getcwd(), 'infra', '.env')
+
+load_dotenv(dotenv_path=env_file)
 
 API_KEY = os.getenv(key='API_KEY', default='')
 BOT_TOKEN = os.getenv(key='BOT_TOKEN', default='')

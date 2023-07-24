@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from telegram.ext import (CommandHandler, Dispatcher, Filters, MessageHandler,
                           Updater)
 
-from callbacks import (actions_callback, echo, repo_callback, start_callback,
-                       to_actions_callback)
+from callbacks import (actions_callback, echo, nextstep_callback,
+                       repo_callback, start_callback, to_actions_callback)
 from exceptions import NoTokenError
 from settings import TO_ACTIONS
 from utils import check_tokens
@@ -48,6 +48,12 @@ def main() -> None:
     )
     dispatcher.add_handler(
         handler=CommandHandler(command='repo', callback=repo_callback)
+    )
+    dispatcher.add_handler(
+        handler=MessageHandler(
+            filters=Filters.regex(pattern=r'/nextstep[.]*'),
+            callback=nextstep_callback
+        )
     )
     dispatcher.add_handler(
         handler=MessageHandler(

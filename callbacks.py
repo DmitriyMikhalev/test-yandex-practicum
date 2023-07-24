@@ -54,14 +54,18 @@ def echo(update: Update, context: CallbackContext) -> None:
 @log_callback
 def nextstep_callback(update: Update, context: CallbackContext) -> None:
     owner_id = os.getenv('OWNER_CHAT_ID')
-    msg: str = update.message.text.removeprefix('/nextstep ')
+    msg: str = update.message.text.removeprefix('/nextstep')
     sender: User = update.message.from_user
+
+    # empty message
+    if msg == '':
+        return echo(context=context, update=update)
 
     context.bot.send_message(
         chat_id=owner_id,
         text='Message from ' +
              LOG_USER.format(sender.username, sender.id) +
-             f'\n - {msg}'
+             f'\n -{msg}'
     )
     update.message.reply_text(text='Сообщение доставлено автору!')
 
